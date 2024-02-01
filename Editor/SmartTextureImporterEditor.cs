@@ -1,6 +1,6 @@
 ﻿using System;
 using UnityEditor;
-using UnityEditor.Experimental.AssetImporters;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 
 [CustomEditor(typeof(SmartTextureImporter), true)]
@@ -17,6 +17,8 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
         };
 
         public static readonly GUIContent invertColor = EditorGUIUtility.TrTextContent("Invert Color", "If enabled outputs the inverted color (1.0 - color)");
+        public static readonly GUIContent channelSource = EditorGUIUtility.TrTextContent("Channel", "Choose which channel will be used from the source texture");
+
         public static readonly GUIContent readWrite = EditorGUIUtility.TrTextContent("Read/Write Enabled", "Enable to be able to access the raw pixel data from code.");
         public static readonly GUIContent generateMipMaps = EditorGUIUtility.TrTextContent("Generate Mip Maps");
         public static readonly GUIContent streamingMipMaps = EditorGUIUtility.TrTextContent("Streaming Mip Maps");
@@ -120,11 +122,16 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
     {
         if (index < 0 || index >= 4)
             return;
-
+        
         EditorGUILayout.PropertyField(m_InputTextures[index], Styles.labelChannels[index]);
-
-        SerializedProperty invertColor = m_InputTextureSettings[index].FindPropertyRelative("invertColor");
-        invertColor.boolValue = EditorGUILayout.Toggle(Styles.invertColor, invertColor.boolValue);
+        EditorGUILayout.BeginHorizontal();
+        {
+            SerializedProperty invertColor = m_InputTextureSettings[index].FindPropertyRelative("invertColor");
+            invertColor.boolValue = EditorGUILayout.Toggle(Styles.invertColor, invertColor.boolValue);
+            SerializedProperty channelSource = m_InputTextureSettings[index].FindPropertyRelative("channel");
+            EditorGUILayout.PropertyField(channelSource, Styles.channelSource);
+        }
+        EditorGUILayout.EndHorizontal();
         EditorGUILayout.Space();
     }
 

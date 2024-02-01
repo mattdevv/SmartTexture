@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using UnityEditor;
-using UnityEditor.Experimental.AssetImporters;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -13,7 +13,13 @@ public class SmartTextureImporter : ScriptedImporter
 
     // Input Texture Settings
     [SerializeField] Texture2D[] m_InputTextures = new Texture2D[4];
-    [SerializeField] TexturePackingSettings[] m_InputTextureSettings = new TexturePackingSettings[4];
+    [SerializeField] TexturePackingSettings[] m_InputTextureSettings =
+    {
+        new TexturePackingSettings(false, ChannelSource.R),
+        new TexturePackingSettings(false, ChannelSource.G), 
+        new TexturePackingSettings(false, ChannelSource.B), 
+        new TexturePackingSettings(false, ChannelSource.A)
+    };
     
     // Output Texture Settings
     [SerializeField] bool m_IsReadable = false;
@@ -79,7 +85,7 @@ public class SmartTextureImporter : ScriptedImporter
         height = height < inputH ? height : inputH;
 
         bool hasAlpha = textures[3] != null;
-        Texture2D texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24, m_EnableMipMap, m_sRGBTexture)
+        Texture2D texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24, m_EnableMipMap, !m_sRGBTexture)
         {
             filterMode = m_FilterMode,
             wrapMode = m_WrapMode,
