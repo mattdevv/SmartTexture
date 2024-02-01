@@ -74,8 +74,13 @@ public static class TextureExtension
 
         return mask;
     }
+
+    public static bool IsTextureSrgb(Texture texture)
+    {
+        return GraphicsFormatUtility.IsSRGBFormat(texture.graphicsFormat);
+    }
     
-    public static void PackChannels(this Texture2D mask, Texture2D[] textures, TexturePackingSettings[] settings = null)
+    public static void PackChannels(Texture2D mask, Texture2D[] textures, TexturePackingSettings[] settings = null)
     {
         if (textures == null || textures.Length != 4)
         {
@@ -96,19 +101,7 @@ public static class TextureExtension
         int height = mask.height;
         int pixelCount = width * height;
         
-        bool isSrgb = GraphicsFormatUtility.IsSRGBFormat(mask.graphicsFormat);
-
-        foreach (Texture2D t in textures)
-        {
-            if (t != null)
-            {
-                if (t.width != width || t.height != height)
-                {
-                    Debug.LogError(t + " input textures must have the same size.");
-                    return;
-                }
-            }
-        }
+        bool isSrgb = IsTextureSrgb(mask);
         
         float[] invertColor =
         {

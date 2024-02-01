@@ -1,7 +1,7 @@
 {
     "name": "com.mattdevv.smarttexture",
     "description": "Allows to create smart texture assets for Unity.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "unity": "2021.3",
     "displayName": "Smart Texture",
     "dependencies": {

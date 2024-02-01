@@ -22,6 +22,10 @@ public class SmartTextureImporter : ScriptedImporter
     };
     
     // Output Texture Settings
+    [SerializeField] bool m_UseExplicitResolution = false;
+    [SerializeField] Vector2Int m_Resolution = new Vector2Int(2048, 2048);
+    
+    [SerializeField] bool m_AlphaIsTransparency = false;
     [SerializeField] bool m_IsReadable = false;
     [SerializeField] bool m_sRGBTexture = false;
     
@@ -79,7 +83,15 @@ public class SmartTextureImporter : ScriptedImporter
         Texture2D[] textures = m_InputTextures;
         TexturePackingSettings[] settings = m_InputTextureSettings;
         
-        var canGenerateTexture = GetOuputTextureSize(textures, out var inputW, out var inputH);
+        var canGenerateTexture = GetMaxOuputTextureSize(textures, out var inputW, out var inputH);
+        
+        // optional resolution override
+        if (m_UseExplicitResolution)
+        {
+            inputW = m_Resolution.x;
+            inputH = m_Resolution.y;
+        }
+        
         //Mimic default importer. We use max size unless assets are smaller
         width = width < inputW ? width : inputW;
         height = height < inputH ? height : inputH;
@@ -87,19 +99,19 @@ public class SmartTextureImporter : ScriptedImporter
         bool hasAlpha = textures[3] != null;
         Texture2D texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24, m_EnableMipMap, !m_sRGBTexture)
         {
+            alphaIsTransparency = m_AlphaIsTransparency,
             filterMode = m_FilterMode,
             wrapMode = m_WrapMode,
             anisoLevel = m_AnisotricLevel,
         };
 
+        //Only attempt to apply any settings if the inputs exist
         if (canGenerateTexture)
         {
-            //Only attempt to apply any settings if the inputs exist
-
-            texture.PackChannels(textures, settings);
+            TextureExtension.PackChannels(texture, textures, settings);
 
             // Mark all input textures as dependency to the texture array.
-            // This causes the texture array to get re-generated when any input texture changes or when the build target changed.
+            // This causes the texture to get re-generated when any input texture changes or when the build target changed.
             foreach (Texture2D t in textures)
             {
                 if (t != null)
@@ -111,13 +123,13 @@ public class SmartTextureImporter : ScriptedImporter
 
             // TODO: Seems like we need to call TextureImporter.SetPlatformTextureSettings to register/apply platform
             // settings. However we can't subclass from TextureImporter... Is there other way?
-
+            
             //Currently just supporting one compression format in liew of TextureImporter.SetPlatformTextureSettings
             if (m_UseExplicitTextureFormat)
                 EditorUtility.CompressTexture(texture, m_TextureFormat, 100);
             else if (m_TexturePlatformSettings.textureCompression != TextureImporterCompression.Uncompressed)
                 texture.Compress(m_TexturePlatformSettings.textureCompression == TextureImporterCompression.CompressedHQ);
-
+            
             ApplyPropertiesViaSerializedObj(texture);
         }
         
@@ -139,32 +151,29 @@ public class SmartTextureImporter : ScriptedImporter
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    bool GetOuputTextureSize(Texture2D[] textures, out int width, out int height)
+    // Returns the largest resolution of given textures, and whether the function succeeded
+    bool GetMaxOuputTextureSize(Texture2D[] textures, out int width, out int height)
     {
-        Texture2D masterTexture = null;
+        width = -1;
+        height = -1;
+        
         foreach (Texture2D t in textures)
         {
-            if (t != null)
-            {
-                //Previously we only read the first readable asset
-                //but we can get the width&height of unreadable textures.
-                //May need more complex selection as now Red channel dictates minimum size
-                //Should we try and find the smallest?
-                masterTexture = t;
-                break;
-            }
+            if (t == null)
+                continue;
+
+            width = Mathf.Max(t.width, width);
+            height = Mathf.Max(t.height, height);
         }
 
-        if (masterTexture == null)
+        if (width == -1 || height == -1)
         {
             var defaultTexture = Texture2D.blackTexture;
             width = defaultTexture.width;
             height = defaultTexture.height;
             return false;
         }
-
-        width = masterTexture.width;
-        height = masterTexture.height;
+        
         return true;
     }
 }
