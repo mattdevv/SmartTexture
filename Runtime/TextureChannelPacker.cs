@@ -2,15 +2,14 @@
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
-// TODO: Add option to pack using compute shader
-// TODO: Convert from sRGB to linear color space if necessary.
+// TODO: HDR support
 // TODO: Texture compression / Formats for IOS and Android
-// TODO: Mipmaps
+// TODO: Investigate mipmap import settings
 
-[System.Serializable]
 /// <summary>
-/// Containts settings that apply color modifiers to each channel.
+/// Contains settings that apply color modifiers to each channel.
 /// </summary>
+[System.Serializable]
 public struct TexturePackingSettings
 {
     /// <summary>
@@ -23,16 +22,16 @@ public struct TexturePackingSettings
     /// </summary>
     public TextureChannel channel;
 
-    public TexturePackingSettings(bool shouldInvert, TextureChannel channelSource)
+    public TexturePackingSettings(TextureChannel channelSource, bool shouldInvert = false)
     {
         invertColor = shouldInvert;
         channel = channelSource;
     }
 }
 
-public static class TextureExtension
+public static class TextureChannelPacker
 {
-    static Material s_PackChannelMaterial = null;
+    private static Material s_PackChannelMaterial = null;
 
     private static Material packChannelMaterial
     {
@@ -42,7 +41,10 @@ public static class TextureExtension
             {
                 Shader packChannelShader = Shader.Find("Hidden/PackChannel");
                 if (packChannelShader == null)
+                {
+                    Debug.LogError("Couldn't find shader used for packing texture. If in a build, was the shader file included?");
                     return null;
+                }
                 
                 s_PackChannelMaterial = new Material(packChannelShader);
             }

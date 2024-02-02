@@ -77,7 +77,7 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
 
     SerializedProperty m_FilterModeProperty;
     SerializedProperty m_WrapModeProperty;
-    SerializedProperty m_AnisotropiceLevelPropery;
+    SerializedProperty m_AnisotropicLevelPropery;
 
     SerializedProperty m_TexturePlatformSettingsProperty;
 
@@ -138,7 +138,7 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
 
                 EditorGUILayout.PropertyField(m_FilterModeProperty, Styles.textureFilterMode);
                 EditorGUILayout.PropertyField(m_WrapModeProperty, Styles.textureWrapMode);
-                EditorGUILayout.IntSlider(m_AnisotropiceLevelPropery, 0, 16, Styles.textureAnisotropicLevel);
+                EditorGUILayout.IntSlider(m_AnisotropicLevelPropery, 0, 16, Styles.textureAnisotropicLevel);
                 EditorGUILayout.Space();
                 
                 EditorGUILayout.PropertyField(m_EnableMipMapProperty, Styles.generateMipMaps);
@@ -282,7 +282,7 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
 
         m_FilterModeProperty = serializedObject.FindProperty("m_FilterMode");
         m_WrapModeProperty = serializedObject.FindProperty("m_WrapMode");
-        m_AnisotropiceLevelPropery = serializedObject.FindProperty("m_AnisotricLevel");
+        m_AnisotropicLevelPropery = serializedObject.FindProperty("m_AnisotropicLevel");
 
         m_TexturePlatformSettingsProperty = serializedObject.FindProperty("m_TexturePlatformSettings");
         m_TextureFormat = serializedObject.FindProperty("m_TextureFormat");

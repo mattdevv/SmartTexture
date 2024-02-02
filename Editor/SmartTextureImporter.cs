@@ -14,6 +14,7 @@ public class SmartTextureImporter : ScriptedImporter
         Minimum,
         Explicit
     }
+    
     public const string k_SmartTextureExtesion = "smartex";
     public const int k_SmartTextureVersion = 1;
     public const int k_MenuPriority = 320;
@@ -22,10 +23,10 @@ public class SmartTextureImporter : ScriptedImporter
     [SerializeField] Texture2D[] m_InputTextures = new Texture2D[4];
     [SerializeField] TexturePackingSettings[] m_InputTextureSettings =
     {
-        new TexturePackingSettings(false, TextureChannel.R),
-        new TexturePackingSettings(false, TextureChannel.G), 
-        new TexturePackingSettings(false, TextureChannel.B), 
-        new TexturePackingSettings(false, TextureChannel.A)
+        new TexturePackingSettings(TextureChannel.R),
+        new TexturePackingSettings(TextureChannel.G), 
+        new TexturePackingSettings(TextureChannel.B), 
+        new TexturePackingSettings(TextureChannel.A)
     };
     
     // Output Texture Settings
@@ -48,7 +49,7 @@ public class SmartTextureImporter : ScriptedImporter
 
     [SerializeField] FilterMode m_FilterMode = FilterMode.Bilinear;
     [SerializeField] TextureWrapMode m_WrapMode = TextureWrapMode.Repeat;
-    [SerializeField] int m_AnisotricLevel = 1;
+    [SerializeField] int m_AnisotropicLevel = 1;
 
     [SerializeField] TextureImporterPlatformSettings m_TexturePlatformSettings = new TextureImporterPlatformSettings();
 
@@ -85,14 +86,14 @@ public class SmartTextureImporter : ScriptedImporter
     
     public override void OnImportAsset(AssetImportContext ctx)
     {
-        Texture2D texture;
+        Texture2D outputTexture;
         
-        Texture2D[] textures = m_InputTextures;
-        TexturePackingSettings[] settings = m_InputTextureSettings;
+        Texture2D[] sourceTextures = m_InputTextures;
+        TexturePackingSettings[] packingSettings = m_InputTextureSettings;
 
-        // check if there is at least 1 valid texture
+        // Check if there is at least 1 valid texture
         bool canGenerateTexture = false;
-        foreach (var t in textures)
+        foreach (var t in sourceTextures)
         {
             if (t != null)
             {
@@ -101,7 +102,7 @@ public class SmartTextureImporter : ScriptedImporter
             }
         }
         
-        //Only attempt to apply any settings if the inputs exist
+        // Only create a new texture if some inputs exist
         if (canGenerateTexture)
         {
             int width;
@@ -115,10 +116,10 @@ public class SmartTextureImporter : ScriptedImporter
                     height = m_TargetResolution.y;
                     break;
                 case TextureSizeMode.Maximum:
-                    GetMaxTextureSize(textures, out width, out height);
+                    GetMaxTextureSize(sourceTextures, out width, out height);
                     break;
                 case TextureSizeMode.Minimum:
-                    GetMinTextureSize(textures, out width, out height);
+                    GetMinTextureSize(sourceTextures, out width, out height);
                     break;
                 default:
                     throw new System.NotImplementedException();
@@ -128,34 +129,34 @@ public class SmartTextureImporter : ScriptedImporter
             width = Mathf.Clamp(width, 1, m_TexturePlatformSettings.maxTextureSize);
             height = Mathf.Clamp(height, 1, m_TexturePlatformSettings.maxTextureSize);
             
-            bool hasAlpha = textures[3] != null;
-            texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24,
-                m_EnableMipMap, !m_sRGBTexture)
+            bool hasAlpha = sourceTextures[3] != null;
+            outputTexture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24, m_EnableMipMap, !m_sRGBTexture)
             {
                 alphaIsTransparency = m_AlphaIsTransparency,
                 filterMode = m_FilterMode,
                 wrapMode = m_WrapMode,
-                anisoLevel = m_AnisotricLevel,
+                anisoLevel = m_AnisotropicLevel,
             };
-            TextureExtension.PackChannels(texture, textures, settings);
+            TextureChannelPacker.PackChannels(outputTexture, sourceTextures, packingSettings);
 
             // TODO: Seems like we need to call TextureImporter.SetPlatformTextureSettings to register/apply platform
             // settings. However we can't subclass from TextureImporter... Is there other way?
             
-            // Find recommended TextureFormat for import settings and compress
+            // Find recommended TextureFormat for selected compression settings
             TextureFormat format = m_UseExplicitTextureFormat
                 ? m_TextureFormat
                 : TextureFormatUtilities.GetRecommendedTextureFormat((TextureCompressionLevel)m_TexturePlatformSettings.textureCompression, hasAlpha, false, m_TexturePlatformSettings.crunchedCompression);
+            // if using crunch compression, get the amount (0 = smaller+LowQ, 100 = larger+HighQ)
             int quality = m_TexturePlatformSettings.crunchedCompression
                 ? m_TexturePlatformSettings.compressionQuality
                 : 100;
-            EditorUtility.CompressTexture(texture, format, quality);
+            EditorUtility.CompressTexture(outputTexture, format, quality);
 
-            ApplyPropertiesViaSerializedObj(texture);
+            ApplyPropertiesViaSerializedObj(outputTexture);
             
             // Mark all input textures as dependency to the texture array.
             // This causes the texture to get re-generated when any input texture changes or when the build target changed.
-            foreach (Texture2D t in textures)
+            foreach (Texture2D t in sourceTextures)
             {
                 if (t != null)
                 {
@@ -167,12 +168,12 @@ public class SmartTextureImporter : ScriptedImporter
         else
         {
             // need asset to contain a valid texture to prevent errors
-            texture = new Texture2D(16, 16);
+            outputTexture = new Texture2D(16, 16);
         }
         
         //If we pass the tex to the 3rd arg we can have it show in an Icon as normal, maybe configurable?
-        ctx.AddObjectToAsset("mask", texture, texture);
-        ctx.SetMainObject(texture);
+        ctx.AddObjectToAsset("mask", outputTexture, outputTexture);
+        ctx.SetMainObject(outputTexture);
 
     }
 
