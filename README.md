@@ -4,7 +4,14 @@ SmartTextures work as a regular 2D texture asset and you can assign it to materi
 
 Dependency tracking is handled by SmartTexture, that means you can change input textures and the texture asset will be re-generated. The input textures are editor only dependencies, they will not be included in the build, unless they are referenced by another asset or scene.
 
-<img width="347" alt="inspector" src="https://user-images.githubusercontent.com/7453395/82161433-dbe8ab00-989c-11ea-9003-10e8ca867bfe.png">
+### Why use this fork?
+- Individual source channel mapping
+- Output size control
+- Additional texture options
+- Extended texture compression settings
+- Bug fixes 
+
+<img alt="inspector" src="https://github.com/mattdevv/SmartTexture/assets/94596138/29039c40-1247-4cfa-b67d-b4ad6bf47c73">
 
 ---
 **NOTE**
@@ -31,11 +38,12 @@ Option 2: Clone or download this Github project and [install it as a local packa
 
 3) On the asset inspector you can configure input textures and texture settings for your smart texture.
 4) Hit `Apply` button to generate the texture with selected settings.
-<img width="347" alt="inspector" src="https://user-images.githubusercontent.com/7453395/82161433-dbe8ab00-989c-11ea-9003-10e8ca867bfe.png">
+<img width="347" alt="inspector" src="https://github.com/mattdevv/SmartTexture/assets/94596138/693532dc-be7f-4836-bbf2-b6ec4b990f5c">
 
 5) Now you can use this texture as any regular 2D texture in your project.
-<img width="524" alt="assign" src="https://user-images.githubusercontent.com/7453395/82161435-de4b0500-989c-11ea-9784-e4a9b9403120.png">
+<img width="524" alt="assign" src="https://github.com/mattdevv/SmartTexture/assets/94596138/432f0b89-d9d7-46df-95ae-63bf7a8b66fc">
 
 ## Acknowledgements
+* Thanks to Felipe Lira ([phi-lira](https://github.com/phi-lira)) for the base of this project 
 * Thanks to pschraut for [Texture2DArrayImporter](https://github.com/pschraut/UnityTexture2DArrayImportPipeline) project. I've used that project to learn a few things about ScriptedImporter and reused the code to create asset file. 
 * Thanks to [Aras P.](https://twitter.com/aras_p) for guidance and ideas on how to create this.
