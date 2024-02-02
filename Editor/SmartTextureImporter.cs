@@ -2,11 +2,18 @@
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using Object = UnityEngine.Object;
 
 [ScriptedImporter(k_SmartTextureVersion, k_SmartTextureExtesion)]
 public class SmartTextureImporter : ScriptedImporter
 {
+    internal enum TextureSizeMode
+    {
+        Maximum,
+        Minimum,
+        Explicit
+    }
     public const string k_SmartTextureExtesion = "smartex";
     public const int k_SmartTextureVersion = 1;
     public const int k_MenuPriority = 320;
@@ -22,8 +29,8 @@ public class SmartTextureImporter : ScriptedImporter
     };
     
     // Output Texture Settings
-    [SerializeField] bool m_UseExplicitResolution = false;
-    [SerializeField] Vector2Int m_Resolution = new Vector2Int(2048, 2048);
+    [SerializeField] TextureSizeMode m_ResolutionMode = TextureSizeMode.Maximum;
+    [SerializeField] Vector2Int m_TargetResolution = new Vector2Int(2048, 2048);
     
     [SerializeField] bool m_AlphaIsTransparency = false;
     [SerializeField] bool m_IsReadable = false;
@@ -78,36 +85,58 @@ public class SmartTextureImporter : ScriptedImporter
     
     public override void OnImportAsset(AssetImportContext ctx)
     {
-        int width = m_TexturePlatformSettings.maxTextureSize;
-        int height = m_TexturePlatformSettings.maxTextureSize;
+        Texture2D texture;
+        
         Texture2D[] textures = m_InputTextures;
         TexturePackingSettings[] settings = m_InputTextureSettings;
-        
-        var canGenerateTexture = GetMaxOuputTextureSize(textures, out var inputW, out var inputH);
-        
-        // optional resolution override
-        if (m_UseExplicitResolution)
+
+        // check if there is at least 1 valid texture
+        bool canGenerateTexture = false;
+        foreach (var t in textures)
         {
-            inputW = m_Resolution.x;
-            inputH = m_Resolution.y;
+            if (t != null)
+            {
+                canGenerateTexture = true;
+                break;
+            }
         }
         
-        //Mimic default importer. We use max size unless assets are smaller
-        width = width < inputW ? width : inputW;
-        height = height < inputH ? height : inputH;
-
-        bool hasAlpha = textures[3] != null;
-        Texture2D texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24, m_EnableMipMap, !m_sRGBTexture)
-        {
-            alphaIsTransparency = m_AlphaIsTransparency,
-            filterMode = m_FilterMode,
-            wrapMode = m_WrapMode,
-            anisoLevel = m_AnisotricLevel,
-        };
-
         //Only attempt to apply any settings if the inputs exist
         if (canGenerateTexture)
         {
+            int width;
+            int height;
+
+            // calculate resolution
+            switch (m_ResolutionMode)
+            {
+                case TextureSizeMode.Explicit:
+                    width = m_TargetResolution.x;
+                    height = m_TargetResolution.y;
+                    break;
+                case TextureSizeMode.Maximum:
+                    GetMaxTextureSize(textures, out width, out height);
+                    break;
+                case TextureSizeMode.Minimum:
+                    GetMinTextureSize(textures, out width, out height);
+                    break;
+                default:
+                    throw new System.NotImplementedException();
+            }
+
+            // clamp maximum resolution to platform settings
+            width = Mathf.Clamp(width, 1, m_TexturePlatformSettings.maxTextureSize);
+            height = Mathf.Clamp(height, 1, m_TexturePlatformSettings.maxTextureSize);
+
+            bool hasAlpha = textures[3] != null;
+            texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24,
+                m_EnableMipMap, !m_sRGBTexture)
+            {
+                alphaIsTransparency = m_AlphaIsTransparency,
+                filterMode = m_FilterMode,
+                wrapMode = m_WrapMode,
+                anisoLevel = m_AnisotricLevel,
+            };
             TextureExtension.PackChannels(texture, textures, settings);
 
             // Mark all input textures as dependency to the texture array.
@@ -123,19 +152,26 @@ public class SmartTextureImporter : ScriptedImporter
 
             // TODO: Seems like we need to call TextureImporter.SetPlatformTextureSettings to register/apply platform
             // settings. However we can't subclass from TextureImporter... Is there other way?
-            
+
             //Currently just supporting one compression format in liew of TextureImporter.SetPlatformTextureSettings
             if (m_UseExplicitTextureFormat)
                 EditorUtility.CompressTexture(texture, m_TextureFormat, 100);
             else if (m_TexturePlatformSettings.textureCompression != TextureImporterCompression.Uncompressed)
-                texture.Compress(m_TexturePlatformSettings.textureCompression == TextureImporterCompression.CompressedHQ);
-            
+                texture.Compress(
+                    m_TexturePlatformSettings.textureCompression == TextureImporterCompression.CompressedHQ);
+
             ApplyPropertiesViaSerializedObj(texture);
         }
+        else
+        {
+            // need asset to contain a valid texture to prevent errors
+            texture = new Texture2D(16, 16);
+        }
         
-		//If we pass the tex to the 3rd arg we can have it show in an Icon as normal, maybe configurable?
-		ctx.AddObjectToAsset("mask", texture, texture);
+        //If we pass the tex to the 3rd arg we can have it show in an Icon as normal, maybe configurable?
+        ctx.AddObjectToAsset("mask", texture, texture);
         ctx.SetMainObject(texture);
+
     }
 
     void ApplyPropertiesViaSerializedObj(Texture tex)
@@ -151,29 +187,53 @@ public class SmartTextureImporter : ScriptedImporter
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    // Returns the largest resolution of given textures, and whether the function succeeded
-    bool GetMaxOuputTextureSize(Texture2D[] textures, out int width, out int height)
+    // Returns the largest resolution of given textures
+    void GetMaxTextureSize(Texture2D[] textures, out int width, out int height)
     {
-        width = -1;
-        height = -1;
+        int maxWidth = -1;
+        int maxHeight = -1;
         
         foreach (Texture2D t in textures)
         {
             if (t == null)
                 continue;
 
-            width = Mathf.Max(t.width, width);
-            height = Mathf.Max(t.height, height);
+            maxWidth = Mathf.Max(t.width, maxWidth);
+            maxHeight = Mathf.Max(t.height, maxHeight);
         }
 
-        if (width == -1 || height == -1)
+        width = maxWidth;
+        height = maxHeight;
+    }
+    
+    // Returns the smallest resolution of given textures
+    void GetMinTextureSize(Texture2D[] textures, out int width, out int height)
+    {
+        int maxWidth = -1;
+        int maxHeight = -1;
+        
+        // use first valid texture as base resolution
+        foreach (Texture2D t in textures)
         {
-            var defaultTexture = Texture2D.blackTexture;
-            width = defaultTexture.width;
-            height = defaultTexture.height;
-            return false;
+            if (t == null)
+                continue;
+
+            maxWidth = t.width;
+            maxHeight = t.height;
+            break;
         }
         
-        return true;
+        // find smallest texture
+        foreach (Texture2D t in textures)
+        {
+            if (t == null)
+                continue;
+
+            maxWidth = Mathf.Min(t.width, maxWidth);
+            maxHeight = Mathf.Min(t.height, maxHeight);
+        }
+
+        width = maxWidth;
+        height = maxHeight;
     }
 }

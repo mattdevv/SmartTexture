@@ -26,10 +26,16 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
             EditorGUIUtility.TrTextContent("A", "Use source's alpha channel"),
         };
         
-        public static readonly GUIContent useExplicitResolution = EditorGUIUtility.TrTextContent("Use explicit resolution", "Enable to set a resolution that overrides the input texture resolutions");
-        public static readonly GUIContent resolution = EditorGUIUtility.TrTextContent("Resolution", "Resolution to use for output texture");
+        public static readonly GUIContent resolutionMode = EditorGUIUtility.TrTextContent("Resolution Mode", "Choose how the output texture's resolution is determined.");
+        public static readonly GUIContent[] resolutionModeLabels =
+        {
+            EditorGUIUtility.TrTextContent("Maximum", "Use maximum length found for each dimension"),
+            EditorGUIUtility.TrTextContent("Minimum", "Use minimum length found for each dimension"),
+            EditorGUIUtility.TrTextContent("Explicit", "Use provided dimensions as an exact resolution"),
+        };
+        public static readonly GUIContent targetResolution = EditorGUIUtility.TrTextContent("Target Resolution", "Exact resolution to use for output texture.");
 
-        public static readonly GUIContent alphaIsTransparency = EditorGUIUtility.TrTextContent("Use alpha as transparency", "Set to indicate that the texture's alpha channel should be used as a transparency mask");
+        public static readonly GUIContent alphaIsTransparency = EditorGUIUtility.TrTextContent("Use alpha as transparency", "Set to indicate that the texture's alpha channel should be used as a transparency mask.");
         public static readonly GUIContent readWrite = EditorGUIUtility.TrTextContent("Read/Write Enabled", "Enable to be able to access the raw pixel data from code.");
         public static readonly GUIContent generateMipMaps = EditorGUIUtility.TrTextContent("Generate Mip Maps");
         public static readonly GUIContent streamingMipMaps = EditorGUIUtility.TrTextContent("Streaming Mip Maps");
@@ -56,8 +62,8 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
     SerializedProperty[] m_InputTextures = new SerializedProperty[4];
     SerializedProperty[] m_InputTextureSettings = new SerializedProperty[4];
     
-    SerializedProperty m_Resolution;
-    SerializedProperty m_UseExplicitResolution;
+    SerializedProperty m_ResolutionMode;
+    SerializedProperty m_TargetResolution;
 
     SerializedProperty m_AlphaIsTransparency;
     SerializedProperty m_IsReadableProperty;
@@ -76,7 +82,6 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
     SerializedProperty m_TextureFormat;
     SerializedProperty m_UseExplicitTextureFormat;
 
-    bool m_ShowAdvanced = false;
     bool m_showInputTextures = true;
     bool m_showOutputTexture = true;
     bool m_showTextureSettings = true;
@@ -92,9 +97,7 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-        
-        m_ShowAdvanced = EditorPrefs.GetBool(k_AdvancedTextureSettingName, m_ShowAdvanced);
-        
+
         EditorGUILayout.Space();
         m_showInputTextures = EditorGUILayout.Foldout(m_showInputTextures, "Input Textures", EditorStyles.foldoutHeader);
         if (m_showInputTextures)
@@ -115,13 +118,13 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
         {
             using (new EditorGUI.IndentLevelScope())
             {
-                EditorGUILayout.PropertyField(m_UseExplicitResolution, Styles.useExplicitResolution);
-                using (new EditorGUI.DisabledScope(!m_UseExplicitResolution.boolValue))
+                m_ResolutionMode.intValue = EditorGUILayout.EnumPopup(Styles.resolutionMode, (SmartTextureImporter.TextureSizeMode)m_ResolutionMode.intValue).GetHashCode();
+                using (new EditorGUI.DisabledScope(m_ResolutionMode.intValue != (int)SmartTextureImporter.TextureSizeMode.Explicit))
                 {
-                    Vector2Int changedResolution = EditorGUILayout.Vector2IntField(Styles.resolution, m_Resolution.vector2IntValue);
+                    Vector2Int changedResolution = EditorGUILayout.Vector2IntField(Styles.targetResolution, m_TargetResolution.vector2IntValue);
                     changedResolution.x = Mathf.Max(changedResolution.x, 1);
                     changedResolution.y = Mathf.Max(changedResolution.y, 1);
-                    m_Resolution.vector2IntValue = changedResolution;
+                    m_TargetResolution.vector2IntValue = changedResolution;
                 }
                 EditorGUILayout.Space();
                 
@@ -247,8 +250,8 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
             m_InputTextureSettings[i] = settingsProperty.GetArrayElementAtIndex(i);
         }
         
-        m_UseExplicitResolution = serializedObject.FindProperty("m_UseExplicitResolution");
-        m_Resolution = serializedObject.FindProperty("m_Resolution");
+        m_ResolutionMode = serializedObject.FindProperty("m_ResolutionMode");
+        m_TargetResolution = serializedObject.FindProperty("m_TargetResolution");
         
         m_AlphaIsTransparency = serializedObject.FindProperty("m_AlphaIsTransparency");
         m_IsReadableProperty = serializedObject.FindProperty("m_IsReadable");
