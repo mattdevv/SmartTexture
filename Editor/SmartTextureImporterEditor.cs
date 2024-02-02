@@ -46,7 +46,9 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
         public static readonly GUIContent textureWrapMode = EditorGUIUtility.TrTextContent("Wrap Mode");
         public static readonly GUIContent textureAnisotropicLevel = EditorGUIUtility.TrTextContent("Anisotropic Level");
 
+        public static readonly GUIContent compressionLevel = EditorGUIUtility.TrTextContent("Compression Quality", "Changes balance between image quality and file size.");
         public static readonly GUIContent crunchCompression = EditorGUIUtility.TrTextContent("Use Crunch Compression");
+        public static readonly GUIContent crunchQuality = EditorGUIUtility.TrTextContent("Crunch Quality", "Changes amount of crunch compression used:\nHigher = more quality but larger file size\nLower = less quality but smaller file size");
         public static readonly GUIContent useExplicitTextureFormat = EditorGUIUtility.TrTextContent("Use Explicit Texture Format");
 
         public static readonly string[] textureSizeOptions =
@@ -54,7 +56,7 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
             "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192",
         };
 
-        public static readonly string[] textureCompressionOptions = Enum.GetNames(typeof(TextureImporterCompression));
+        public static readonly string[] textureCompressionOptions = {"None", "Balanced", "High Quality", "Low Quality"};
         public static readonly string[] textureFormat = Enum.GetNames(typeof(TextureFormat));
         public static readonly string[] resizeAlgorithmOptions = Enum.GetNames(typeof(TextureResizeAlgorithm));
     }
@@ -168,6 +170,20 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
     {
         if (index < 0 || index >= 4)
             return;
+
+        Texture2D texture = (Texture2D) m_InputTextures[index].objectReferenceValue;
+        if (texture != null)
+        {
+            bool compressionWarning = TextureFormatUtilities.IsTextureCompressed(texture);
+            bool srgbWarning = TextureFormatUtilities.IsTextureSrgb(texture) && !m_sRGBTextureProperty.boolValue;
+            if (compressionWarning || srgbWarning)
+            {
+                string warning = "Warning, input source will cause artifacts";
+                if (compressionWarning) warning += "\n - Source is using compression";
+                if (srgbWarning) warning += "\n - Source uses srgb color but output is not";
+                EditorGUILayout.HelpBox(warning, MessageType.Warning);
+            }
+        }
         
         EditorGUILayout.PropertyField(m_InputTextures[index], Styles.labelChannels[index]);
         EditorGUILayout.BeginHorizontal();
@@ -187,9 +203,9 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
         SerializedProperty maxTextureSize = m_TexturePlatformSettingsProperty.FindPropertyRelative("m_MaxTextureSize");
         SerializedProperty resizeAlgorithm =
             m_TexturePlatformSettingsProperty.FindPropertyRelative("m_ResizeAlgorithm");
-        SerializedProperty textureCompression =
+        SerializedProperty textureCompressionLevel =
             m_TexturePlatformSettingsProperty.FindPropertyRelative("m_TextureCompression");
-        SerializedProperty textureCompressionCrunched =
+        SerializedProperty textureUseCrunch =
             m_TexturePlatformSettingsProperty.FindPropertyRelative("m_CrunchedCompression");
         SerializedProperty textureCrunchQuality =
             m_TexturePlatformSettingsProperty.FindPropertyRelative("m_CompressionQuality");
@@ -207,7 +223,6 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
         EditorGUILayout.LabelField("Compression", EditorStyles.boldLabel);
         using (new EditorGUI.IndentLevelScope())
         {
-            GUILayout.BeginHorizontal();
             EditorGUI.BeginChangeCheck();
             bool explicitFormat = EditorGUILayout.Toggle(Styles.useExplicitTextureFormat, m_UseExplicitTextureFormat.boolValue);
             if (EditorGUI.EndChangeCheck())
@@ -220,26 +235,24 @@ public class SmartTextureImporterEditor : ScriptedImporterEditor
                 if (EditorGUI.EndChangeCheck())
                     m_TextureFormat.intValue = format;
             }
-            GUILayout.EndHorizontal();
 
             using (new EditorGUI.DisabledScope(explicitFormat))
             {
                 EditorGUI.BeginChangeCheck();
-                int compressionOption = EditorGUILayout.Popup("Compression Quality", textureCompression.intValue,
-                    Styles.textureCompressionOptions);
+                int compressionOption = EditorGUILayout.Popup(Styles.compressionLevel, textureCompressionLevel.intValue, Styles.textureCompressionOptions);
                 if (EditorGUI.EndChangeCheck())
-                    textureCompression.intValue = compressionOption;
+                    textureCompressionLevel.intValue = compressionOption;
             }
             
             EditorGUI.BeginChangeCheck();
-            bool crunchOption = EditorGUILayout.Toggle(Styles.crunchCompression, textureCompressionCrunched.boolValue);
+            bool crunchOption = EditorGUILayout.Toggle(Styles.crunchCompression, textureUseCrunch.boolValue);
             if (EditorGUI.EndChangeCheck())
-                textureCompressionCrunched.boolValue = crunchOption;
+                textureUseCrunch.boolValue = crunchOption;
             
             using (new EditorGUI.DisabledScope(!crunchOption))
             {
                 EditorGUI.BeginChangeCheck();
-                int crunchLevel = EditorGUILayout.IntSlider("Crunch Level", textureCrunchQuality.intValue, 0, 100, new GUILayoutOption[] {GUILayout.ExpandWidth(true)});
+                int crunchLevel = EditorGUILayout.IntSlider(Styles.crunchQuality, textureCrunchQuality.intValue, 0, 100, new GUILayoutOption[] {GUILayout.ExpandWidth(true)});
                 if (EditorGUI.EndChangeCheck())
                     textureCrunchQuality.intValue = crunchLevel;
             }

@@ -34,7 +34,7 @@ public class SmartTextureImporter : ScriptedImporter
     
     [SerializeField] bool m_AlphaIsTransparency = false;
     [SerializeField] bool m_IsReadable = false;
-    [SerializeField] bool m_sRGBTexture = false;
+    [SerializeField] bool m_sRGBTexture = true;
     
     [SerializeField] bool m_EnableMipMap = true;
     [SerializeField] bool m_StreamingMipMaps = false;
