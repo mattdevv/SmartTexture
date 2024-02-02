@@ -1,5 +1,6 @@
 {
-    "name": "Philira.SmartTexture.Runtime",
+    "name": "mattdevv.SmartTexture.Runtime",
+    "rootNamespace": "SmartTexture.Runtime",
     "references": [],
     "includePlatforms": [
         "Android",
