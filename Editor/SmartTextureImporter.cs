@@ -22,10 +22,10 @@ public class SmartTextureImporter : ScriptedImporter
     [SerializeField] Texture2D[] m_InputTextures = new Texture2D[4];
     [SerializeField] TexturePackingSettings[] m_InputTextureSettings =
     {
-        new TexturePackingSettings(false, ChannelSource.R),
-        new TexturePackingSettings(false, ChannelSource.G), 
-        new TexturePackingSettings(false, ChannelSource.B), 
-        new TexturePackingSettings(false, ChannelSource.A)
+        new TexturePackingSettings(false, TextureChannel.R),
+        new TexturePackingSettings(false, TextureChannel.G), 
+        new TexturePackingSettings(false, TextureChannel.B), 
+        new TexturePackingSettings(false, TextureChannel.A)
     };
     
     // Output Texture Settings
@@ -127,7 +127,7 @@ public class SmartTextureImporter : ScriptedImporter
             // clamp maximum resolution to platform settings
             width = Mathf.Clamp(width, 1, m_TexturePlatformSettings.maxTextureSize);
             height = Mathf.Clamp(height, 1, m_TexturePlatformSettings.maxTextureSize);
-
+            
             bool hasAlpha = textures[3] != null;
             texture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24,
                 m_EnableMipMap, !m_sRGBTexture)
@@ -139,6 +139,20 @@ public class SmartTextureImporter : ScriptedImporter
             };
             TextureExtension.PackChannels(texture, textures, settings);
 
+            // TODO: Seems like we need to call TextureImporter.SetPlatformTextureSettings to register/apply platform
+            // settings. However we can't subclass from TextureImporter... Is there other way?
+            
+            // Find recommended TextureFormat for import settings and compress
+            TextureFormat format = m_UseExplicitTextureFormat
+                ? m_TextureFormat
+                : TextureFormatUtilities.GetRecommendedTextureFormat((TextureCompressionLevel)m_TexturePlatformSettings.textureCompression, hasAlpha, false, m_TexturePlatformSettings.crunchedCompression);
+            int quality = m_TexturePlatformSettings.crunchedCompression
+                ? m_TexturePlatformSettings.compressionQuality
+                : 100;
+            EditorUtility.CompressTexture(texture, format, quality);
+
+            ApplyPropertiesViaSerializedObj(texture);
+            
             // Mark all input textures as dependency to the texture array.
             // This causes the texture to get re-generated when any input texture changes or when the build target changed.
             foreach (Texture2D t in textures)
@@ -149,18 +163,6 @@ public class SmartTextureImporter : ScriptedImporter
                     ctx.DependsOnSourceAsset(path);
                 }
             }
-
-            // TODO: Seems like we need to call TextureImporter.SetPlatformTextureSettings to register/apply platform
-            // settings. However we can't subclass from TextureImporter... Is there other way?
-
-            //Currently just supporting one compression format in liew of TextureImporter.SetPlatformTextureSettings
-            if (m_UseExplicitTextureFormat)
-                EditorUtility.CompressTexture(texture, m_TextureFormat, 100);
-            else if (m_TexturePlatformSettings.textureCompression != TextureImporterCompression.Uncompressed)
-                texture.Compress(
-                    m_TexturePlatformSettings.textureCompression == TextureImporterCompression.CompressedHQ);
-
-            ApplyPropertiesViaSerializedObj(texture);
         }
         else
         {

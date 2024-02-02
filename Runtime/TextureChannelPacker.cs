@@ -4,16 +4,8 @@ using UnityEngine.Rendering;
 
 // TODO: Add option to pack using compute shader
 // TODO: Convert from sRGB to linear color space if necessary.
-// TODO: Texture compression / Format
+// TODO: Texture compression / Formats for IOS and Android
 // TODO: Mipmaps
-
-public enum ChannelSource
-{
-    R = 0,
-    G = 1,
-    B = 2,
-    A = 3
-};
 
 [System.Serializable]
 /// <summary>
@@ -29,9 +21,9 @@ public struct TexturePackingSettings
     /// <summary>
     /// Which color channel to use from the source
     /// </summary>
-    public ChannelSource channel;
+    public TextureChannel channel;
 
-    public TexturePackingSettings(bool shouldInvert, ChannelSource channelSource)
+    public TexturePackingSettings(bool shouldInvert, TextureChannel channelSource)
     {
         invertColor = shouldInvert;
         channel = channelSource;
@@ -59,7 +51,7 @@ public static class TextureExtension
         }
     }
 
-    public static Vector4 GetChannelMask(ChannelSource channel)
+    private static Vector4 GetChannelMask(TextureChannel channel)
     {
         Vector4 mask = Vector4.zero;
         
@@ -75,11 +67,6 @@ public static class TextureExtension
         return mask;
     }
 
-    public static bool IsTextureSrgb(Texture texture)
-    {
-        return GraphicsFormatUtility.IsSRGBFormat(texture.graphicsFormat);
-    }
-    
     public static void PackChannels(Texture2D mask, Texture2D[] textures, TexturePackingSettings[] settings = null)
     {
         if (textures == null || textures.Length != 4)
@@ -93,7 +80,7 @@ public static class TextureExtension
             for (int i = 0; i < settings.Length; ++i)
             {
                 settings[i].invertColor = false;
-                settings[i].channel = (ChannelSource)i;
+                settings[i].channel = (TextureChannel)i;
             }
         }
         
@@ -101,7 +88,7 @@ public static class TextureExtension
         int height = mask.height;
         int pixelCount = width * height;
         
-        bool isSrgb = IsTextureSrgb(mask);
+        bool isSrgb = TextureFormatUtilities.IsTextureSrgb(mask);
         
         float[] invertColor =
         {
