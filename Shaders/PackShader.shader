@@ -18,7 +18,7 @@
     Texture2D _GreenChannel;
     Texture2D _BlueChannel;
     Texture2D _AlphaChannel;
-    sampler sampler_point_clamp;
+    sampler sampler_linear_clamp;
 
     half4 _InvertColor;
     half4 _ChannelMapR;
@@ -42,10 +42,10 @@
     {
         float2 uv = i.uv;
         
-        half r = dot(_RedChannel.Sample(sampler_point_clamp, uv), _ChannelMapR);
-        half g = dot(_GreenChannel.Sample(sampler_point_clamp, uv), _ChannelMapG);
-        half b = dot(_BlueChannel.Sample(sampler_point_clamp, uv), _ChannelMapB);
-        half a = dot(_AlphaChannel.Sample(sampler_point_clamp, uv), _ChannelMapA);
+        half r = dot(_RedChannel.Sample(sampler_linear_clamp, uv), _ChannelMapR);
+        half g = dot(_GreenChannel.Sample(sampler_linear_clamp, uv), _ChannelMapG);
+        half b = dot(_BlueChannel.Sample(sampler_linear_clamp, uv), _ChannelMapB);
+        half a = dot(_AlphaChannel.Sample(sampler_linear_clamp, uv), _ChannelMapA);
         
         half4 rgba = half4(r, g, b, a);
         rgba = lerp(rgba, 1-rgba, _InvertColor);
