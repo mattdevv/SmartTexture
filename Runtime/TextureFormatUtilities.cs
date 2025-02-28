@@ -96,21 +96,21 @@ namespace SmartTexture
 #elif UNITY_ANDROID
             Debug.LogError("Android platform not implemented, using default graphics format");
             if (hasAlpha)
-                none = low = normal = high = GraphicsFormat.R8G8B8A8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8A8_UNorm);
             else
-                none = low = normal = high = GraphicsFormat.R8G8B8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8_UNorm);
 #elif UNITY_IOS
             Debug.LogError("IOS platform not implemented, using default graphics format");
             if (hasAlpha)
-                none = low = normal = high = GraphicsFormat.R8G8B8A8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8A8_UNorm);
             else
-                none = low = normal = high = GraphicsFormat.R8G8B8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8_UNorm);
 #else
             Debug.LogError("Platform not defined, using default graphics format");
             if (hasAlpha)
-                none = low = normal = high = GraphicsFormat.R8G8B8A8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8A8_UNorm);
             else
-                none = low = normal = high = GraphicsFormat.R8G8B8_UNorm;
+                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8_UNorm);
 #endif
 
             TextureFormat format;
