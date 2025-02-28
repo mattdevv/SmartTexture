@@ -88,7 +88,7 @@ namespace SmartTexture.Editor
             var fileName = string.Format("SmartTexture.{0}", k_SmartTextureExtesion);
             directoryPath = AssetDatabase.GenerateUniqueAssetPath(directoryPath + fileName);
             ProjectWindowUtil.CreateAssetWithContent(directoryPath,
-                "Smart Texture Asset for Unity. Allows to channel pack textures by using a ScriptedImporter. Requires Smart Texture Package from https://github.com/phi-lira/SmartTexture. Developed by Felipe Lira.");
+                "Smart Texture Asset for Unity. Allows to channel pack textures by using a ScriptedImporter. Requires Smart Texture Package from https://github.com/mattdevv/SmartTexture.");
         }
 
         public override void OnImportAsset(AssetImportContext ctx)
