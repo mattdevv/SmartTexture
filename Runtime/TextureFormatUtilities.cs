@@ -82,6 +82,7 @@ namespace SmartTexture
                 high = TextureFormat.BC7;
                 low = TextureFormat.DXT1;
             }
+            
 #elif UNITY_WEBGL
             if (hasAlpha)
             {
@@ -94,17 +95,65 @@ namespace SmartTexture
                 low = normal = high = TextureFormat.DXT1;
             }
 #elif UNITY_ANDROID
-            Debug.LogError("Android platform not implemented, using default graphics format");
-            if (hasAlpha)
-                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8A8_UNorm);
+            if (isHDR)
+            {
+                none = TextureFormat.RGBAHalf;
+                normal = TextureFormat.ASTC_HDR_6x6;
+                high = TextureFormat.ASTC_HDR_4x4;
+                low = TextureFormat.ASTC_HDR_12x12;
+            }
+            else if (hasAlpha)
+            {
+                none = TextureFormat.RGBA32;
+                normal = TextureFormat.ASTC_6x6;
+                high = TextureFormat.ASTC_4x4;
+                low = TextureFormat.ASTC_12x12;
+            }
             else
-                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8_UNorm);
+            {
+                none = TextureFormat.RGB24;
+                normal = TextureFormat.ASTC_6x6;
+                high = TextureFormat.ASTC_4x4;
+                low = TextureFormat.ASTC_12x12;
+            }
+                
+            if (useCrunch && !isHDR)
+            {
+                if (hasAlpha)
+                    low = normal = high = TextureFormat.ETC2_RGBA8Crunched;
+                else
+                    low = normal = high = TextureFormat.ETC_RGB4Crunched;
+            }
 #elif UNITY_IOS
-            Debug.LogError("IOS platform not implemented, using default graphics format");
-            if (hasAlpha)
-                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8A8_UNorm);
+            if (isHDR)
+            {
+                none = TextureFormat.RGBAHalf;
+                normal = TextureFormat.ASTC_HDR_6x6;
+                high = TextureFormat.ASTC_HDR_4x4;
+                low = TextureFormat.ASTC_HDR_12x12;
+            }
+            else if (hasAlpha)
+            {
+                none = TextureFormat.RGBA32;
+                normal = TextureFormat.ASTC_6x6;
+                high = TextureFormat.ASTC_4x4;
+                low = TextureFormat.ASTC_12x12;
+            }
             else
-                none = low = normal = high = GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.R8G8B8_UNorm);
+            {
+                none = TextureFormat.RGB24;
+                normal = TextureFormat.ASTC_6x6;
+                high = TextureFormat.ASTC_4x4;
+                low = TextureFormat.ASTC_12x12;
+            }
+                
+            if (useCrunch && !isHDR)
+            {
+                if (hasAlpha)
+                    low = normal = high = TextureFormat.ETC2_RGBA8Crunched;
+                else
+                    low = normal = high = TextureFormat.ETC_RGB4Crunched;
+            }
 #else
             Debug.LogError("Platform not defined, using default graphics format");
             if (hasAlpha)
