@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using UnityEngine.Experimental.Rendering;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 
 // TODO: HDR support
@@ -42,11 +42,36 @@ namespace SmartTexture
             {
                 if (s_PackChannelMaterial == null)
                 {
-                    Shader packChannelShader = Shader.Find("Hidden/PackChannel");
+                    Shader packChannelShader = null;
+#if UNITY_EDITOR
+                    string[] guids = Array.Empty<string>();
+                        
+                    // search in the expected path first
+                    const string packagePath = "Packages/com.mattdevv.smarttexture/Shaders";
+                    if (UnityEditor.AssetDatabase.IsValidFolder(packagePath))
+                        guids = UnityEditor.AssetDatabase.FindAssets("SmartTexture_PackShader t:Shader", new string[] { packagePath });
+                    
+                    // if not in expected location, search whole project
+                    if (guids.Length == 0)
+                        guids = UnityEditor.AssetDatabase.FindAssets("SmartTexture_PackShader t:Shader", null);
+
+                    // try to get a shader from the first found asset
+                    if (guids.Length > 0)
+                    {
+                        UnityEditor.GUID guid = new(guids[0]);
+                        if (UnityEditor.AssetDatabase.GetMainAssetTypeFromGUID(guid) == typeof(Shader))
+                        {
+                            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                            packChannelShader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>(path);
+                        }
+                    }
+#else
+                    packChannelShader = Shader.Find("Hidden/PackChannel");
+#endif
                     if (packChannelShader == null)
                     {
                         Debug.LogError(
-                            "Couldn't find shader used for packing texture. If in a build, was the shader file included?");
+                            "[SmartTexture] Couldn't find shader used for packing texture. If in a build, was the shader file included?");
                         return null;
                     }
 
@@ -104,17 +129,18 @@ namespace SmartTexture
                 settings[3].invertColor ? 1.0f : 0.0f,
             };
 
-            packChannelMaterial.SetTexture("_RedChannel", textures[0] != null ? textures[0] : Texture2D.blackTexture);
-            packChannelMaterial.SetTexture("_GreenChannel", textures[1] != null ? textures[1] : Texture2D.blackTexture);
-            packChannelMaterial.SetTexture("_BlueChannel", textures[2] != null ? textures[2] : Texture2D.blackTexture);
-            packChannelMaterial.SetTexture("_AlphaChannel", textures[3] != null ? textures[3] : Texture2D.blackTexture);
-            packChannelMaterial.SetVector("_InvertColor",
+            var useMaterial = packChannelMaterial;
+            useMaterial.SetTexture("_RedChannel", textures[0] != null ? textures[0] : Texture2D.blackTexture);
+            useMaterial.SetTexture("_GreenChannel", textures[1] != null ? textures[1] : Texture2D.blackTexture);
+            useMaterial.SetTexture("_BlueChannel", textures[2] != null ? textures[2] : Texture2D.blackTexture);
+            useMaterial.SetTexture("_AlphaChannel", textures[3] != null ? textures[3] : Texture2D.blackTexture);
+            useMaterial.SetVector("_InvertColor",
                 new Vector4(invertColor[0], invertColor[1], invertColor[2], invertColor[3]));
 
-            packChannelMaterial.SetVector("_ChannelMapR", GetChannelMask(settings[0].channel));
-            packChannelMaterial.SetVector("_ChannelMapG", GetChannelMask(settings[1].channel));
-            packChannelMaterial.SetVector("_ChannelMapB", GetChannelMask(settings[2].channel));
-            packChannelMaterial.SetVector("_ChannelMapA", GetChannelMask(settings[3].channel));
+            useMaterial.SetVector("_ChannelMapR", GetChannelMask(settings[0].channel));
+            useMaterial.SetVector("_ChannelMapG", GetChannelMask(settings[1].channel));
+            useMaterial.SetVector("_ChannelMapB", GetChannelMask(settings[2].channel));
+            useMaterial.SetVector("_ChannelMapA", GetChannelMask(settings[3].channel));
 
             var rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32,
                 isSrgb ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
@@ -122,7 +148,7 @@ namespace SmartTexture
             RenderTexture.active = rt;
 
             CommandBuffer cmd = new CommandBuffer();
-            cmd.Blit(null, rt, packChannelMaterial);
+            cmd.Blit(null, rt, useMaterial);
             cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
             Graphics.ExecuteCommandBuffer(cmd);
             mask.ReadPixels(new Rect(0, 0, width, height), 0, 0);
