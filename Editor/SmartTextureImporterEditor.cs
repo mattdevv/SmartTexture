@@ -135,8 +135,7 @@ namespace SmartTexture.Editor
             serializedObject.Update();
 
             EditorGUILayout.Space();
-            m_showInputTextures =
-                EditorGUILayout.Foldout(m_showInputTextures, "Input Textures", EditorStyles.foldoutHeader);
+            m_showInputTextures = EditorGUILayout.Foldout(m_showInputTextures, "Input Textures", EditorStyles.foldoutHeader);
             if (m_showInputTextures)
             {
                 using (new EditorGUI.IndentLevelScope())
@@ -144,15 +143,14 @@ namespace SmartTexture.Editor
                     DrawInputTexture(0);
                     DrawInputTexture(1);
                     DrawInputTexture(2);
-                    DrawInputTexture(3);
+                    DrawInputTexture(3, true);
                 }
             }
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();
 
-            m_showOutputTexture =
-                EditorGUILayout.Foldout(m_showOutputTexture, "Output Texture", EditorStyles.foldoutHeader);
+            m_showOutputTexture = EditorGUILayout.Foldout(m_showOutputTexture, "Output Texture", EditorStyles.foldoutHeader);
             if (m_showOutputTexture)
             {
                 using (new EditorGUI.IndentLevelScope())
@@ -210,7 +208,7 @@ namespace SmartTexture.Editor
             ApplyRevertGUI();
         }
 
-        void DrawInputTexture(int index)
+        void DrawInputTexture(int index, bool isAlpha = false)
         {
             if (index < 0 || index >= 4)
                 return;
@@ -221,13 +219,17 @@ namespace SmartTexture.Editor
                 TextureImporterType textureType = SmartTextureImporter.GetTextureType(texture);
                 if (textureType == TextureImporterType.Default)  // Check/show warnings if no errors
                 {
+                    bool targetIsSRGB = isAlpha ? false : m_sRGBTextureProperty.boolValue;
+                    bool sourceIsSRGB = m_InputTextureSettings[index].FindPropertyRelative("channel").enumValueIndex == (int)TextureChannel.A ? false : TextureFormatUtilities.IsTextureSrgb(texture);
+
                     bool compressionWarning = TextureFormatUtilities.IsTextureCompressed(texture);
-                    bool srgbWarning = TextureFormatUtilities.IsTextureSrgb(texture) && !m_sRGBTextureProperty.boolValue;
+                    bool srgbWarning = sourceIsSRGB != targetIsSRGB;
                     if (compressionWarning || srgbWarning)
                     {
                         string warning = "Warning, input source will cause artifacts";
                         if (compressionWarning) warning += "\n - Source is using compression";
-                        if (srgbWarning) warning += "\n - Source uses srgb color but output is not";
+                        if (srgbWarning) warning += $"\n - Input texture channel uses " + (sourceIsSRGB ? "srgb" : "linear") + 
+                                                    " encoding but target will be " + (targetIsSRGB ? "srgb" : "linear");
                         EditorGUILayout.HelpBox(warning, MessageType.Warning);
                     }
                 }
