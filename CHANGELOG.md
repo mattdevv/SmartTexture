@@ -8,11 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
  - Multi editing support
 
-## [0.4.2] - 2025-09-05
+## [0.4.2] - 2025-05-09
 ### Fixed
  - Asset import could fail after deleting library folder or changing build target
 
-## [0.4.1] - 2025-28-02
+## [0.4.1] - 2025-02-28
 ### Added
  - Basic support for Android and iOS. Uses ASTC for basic compression, and ETC1/2 for crunch compression
 
