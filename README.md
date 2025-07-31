@@ -2,7 +2,12 @@
 SmartTexture is a custom asset for Unity that allows you a [channel packing](http://wiki.polycount.com/wiki/ChannelPacking) workflow in the editortextures and use them in the Unity editor for a streamlined workflow.
 SmartTextures work as a regular 2D texture asset and you can assign it to material inspectors.
 
-Dependency tracking is handled by SmartTexture, that means you can change input textures and the texture asset will be re-generated. The input textures are editor only dependencies, they will not be included in the build, unless they are referenced by another asset or scene.
+Dependency tracking is handled by SmartTexture, meaning if input textures change the SmartTexture will be re-generated automatically. The input textures are editor only dependencies, they will not be marked for inclusion in the build.
+
+### Usecases
+- Packing terrain layer mask map
+- Packing smoothness into metallic alpha for URP Lit shader
+- Packing mask map or detail map for HDRP lit shaders
 
 ### Why use this fork?
 - Individual source channel mapping
