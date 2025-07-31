@@ -6,6 +6,7 @@ using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 namespace SmartTexture.Editor
@@ -21,7 +22,7 @@ namespace SmartTexture.Editor
         }
 
         public const string k_SmartTextureExtesion = "smartex";
-        public const int k_SmartTextureVersion = 3;
+        public const int k_SmartTextureVersion = 4;
         public const int k_MenuPriority = 320;
 
         // Input Texture Settings
@@ -42,6 +43,8 @@ namespace SmartTexture.Editor
         [SerializeField] bool m_AlphaIsTransparency = false;
         [SerializeField] bool m_IsReadable = false;
         [SerializeField] bool m_sRGBTexture = true;
+        [SerializeField] bool m_IsHDR = false;
+        [SerializeField] bool m_ForceAlpha = false;
 
         [SerializeField] bool m_EnableMipMap = true;
         [SerializeField] bool m_StreamingMipMaps = false;
@@ -137,9 +140,15 @@ namespace SmartTexture.Editor
                 width = Mathf.Clamp(width, 1, m_TexturePlatformSettings.maxTextureSize);
                 height = Mathf.Clamp(height, 1, m_TexturePlatformSettings.maxTextureSize);
 
-                bool hasAlpha = sourceTextures[3] != null;
-                outputTexture = new Texture2D(width, height, hasAlpha ? TextureFormat.ARGB32 : TextureFormat.RGB24,
-                    m_EnableMipMap, !m_sRGBTexture)
+                bool hasAlpha = m_ForceAlpha ? true : sourceTextures[3] != null;
+                bool isSRGB = m_IsHDR ? false : m_sRGBTexture;
+                var renderFormat = TextureFormatUtilities.GetRecommendedTextureFormat(
+                    TextureCompressionLevel.Uncompressed,
+                    hasAlpha,
+                    m_IsHDR,
+                    false);
+                outputTexture = new Texture2D(width, height, renderFormat,
+                    m_EnableMipMap, !isSRGB)
                 {
                     alphaIsTransparency = m_AlphaIsTransparency,
                     filterMode = m_FilterMode,
@@ -152,28 +161,27 @@ namespace SmartTexture.Editor
                 // settings. However we can't subclass from TextureImporter... Is there other way?
 
                 // Find recommended TextureFormat for selected compression settings
-                TextureFormat format = m_UseExplicitTextureFormat
+                TextureFormat outputFormat = m_UseExplicitTextureFormat
                     ? m_TextureFormat
                     : TextureFormatUtilities.GetRecommendedTextureFormat(
-                        (TextureCompressionLevel) m_TexturePlatformSettings.textureCompression, hasAlpha, false,
+                        (TextureCompressionLevel) m_TexturePlatformSettings.textureCompression, hasAlpha, m_IsHDR,
                         m_TexturePlatformSettings.crunchedCompression);
                 // if using crunch compression, get the amount (0 = smaller+LowQ, 100 = larger+HighQ)
                 int quality = m_TexturePlatformSettings.crunchedCompression
                     ? m_TexturePlatformSettings.compressionQuality
                     : 100;
-                EditorUtility.CompressTexture(outputTexture, format, quality);
-
+                EditorUtility.CompressTexture(outputTexture, outputFormat, quality);
+                
                 ApplyPropertiesViaSerializedObj(outputTexture);
 
                 // Mark all input textures as dependency to the texture array.
                 // This causes the texture to get re-generated when any input texture changes or when the build target changed.
                 foreach (Texture2D t in sourceTextures)
                 {
-                    if (t != null)
-                    {
-                        var path = AssetDatabase.GetAssetPath(t);
-                        ctx.DependsOnSourceAsset(path);
-                    }
+                    if (t == null) continue;
+                    
+                    var path = AssetDatabase.GetAssetPath(t);
+                    ctx.DependsOnSourceAsset(path);
                 }
             }
             else
@@ -195,8 +203,6 @@ namespace SmartTexture.Editor
             so.FindProperty("m_IsReadable").boolValue = m_IsReadable;
             so.FindProperty("m_StreamingMipmaps").boolValue = m_StreamingMipMaps;
             so.FindProperty("m_StreamingMipmapsPriority").intValue = m_StreamingMipMapPriority;
-            //Set ColorSpace on ctr instead
-            //so.FindProperty("m_ColorSpace").intValue = (int)(m_sRGBTexture ? ColorSpace.Gamma : ColorSpace.Linear);
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }

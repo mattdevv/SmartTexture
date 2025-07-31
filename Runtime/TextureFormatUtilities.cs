@@ -7,15 +7,16 @@ using UnityEngine.Rendering;
 
 namespace SmartTexture
 {
+    [Flags]
     public enum TextureChannel
     {
-        R = 0,
-        G = 1,
-        B = 2,
-        A = 3
+        R = 1,
+        G = 2,
+        B = 4,
+        A = 8
     };
 
-// Trying to match UnityEditor.TextureCompressionQuality
+    // Trying to match UnityEditor.TextureCompressionQuality
     public enum TextureCompressionLevel
     {
         Uncompressed,
@@ -26,6 +27,46 @@ namespace SmartTexture
 
     public static class TextureFormatUtilities
     {
+        public static TextureChannel GetTextureChannelMask(bool r = false, bool g = false, bool b = false, bool a = false)
+        {
+            TextureChannel mask = 0;
+            if (r) mask |= TextureChannel.R;
+            if (g) mask |= TextureChannel.G;
+            if (b) mask |= TextureChannel.B;
+            if (a) mask |= TextureChannel.A;
+            return mask;
+        }
+        
+        public static TextureChannel GetTextureChannelMask(GraphicsFormat graphicsFormat)
+        {
+            int colorChannels = (int) GraphicsFormatUtility.GetColorComponentCount(graphicsFormat);
+            Debug.Assert(colorChannels <= 3);
+            int alphaChannels = (int) GraphicsFormatUtility.GetAlphaComponentCount(graphicsFormat);
+            Debug.Assert(alphaChannels <= 1);
+            
+            TextureChannel mask = 0;
+            if (colorChannels > 0) mask |= TextureChannel.R;
+            if (colorChannels > 1) mask |= TextureChannel.G;
+            if (colorChannels > 2) mask |= TextureChannel.B;
+            if (alphaChannels > 0) mask |= TextureChannel.A;
+            return mask;
+        }
+        
+        public static TextureChannel GetTextureChannelMask(TextureFormat textureFormat)
+        {
+            int colorChannels = (int) GraphicsFormatUtility.GetColorComponentCount(textureFormat);
+            Debug.Assert(colorChannels <= 3);
+            int alphaChannels = (int) GraphicsFormatUtility.GetAlphaComponentCount(textureFormat);
+            Debug.Assert(alphaChannels <= 1);
+            
+            TextureChannel mask = 0;
+            if (colorChannels > 0) mask |= TextureChannel.R;
+            if (colorChannels > 1) mask |= TextureChannel.G;
+            if (colorChannels > 2) mask |= TextureChannel.B;
+            if (alphaChannels > 0) mask |= TextureChannel.A;
+            return mask;
+        }
+        
         public static bool IsTextureSrgb(Texture texture)
         {
             return GraphicsFormatUtility.IsSRGBFormat(texture.graphicsFormat);

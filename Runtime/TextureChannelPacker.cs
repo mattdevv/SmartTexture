@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 // TODO: HDR support
@@ -119,8 +120,10 @@ namespace SmartTexture
             int height = mask.height;
             int pixelCount = width * height;
 
-            bool isSrgb = TextureFormatUtilities.IsTextureSrgb(mask);
-
+            bool isSRGB = TextureFormatUtilities.IsTextureSrgb(mask);
+            bool isHDR = GraphicsFormatUtility.IsHDRFormat(mask.format);
+            bool supportsFloatTexture = SystemInfo.SupportsTextureFormat(TextureFormat.RGBAFloat);
+            
             float[] invertColor =
             {
                 settings[0].invertColor ? 1.0f : 0.0f,
@@ -134,16 +137,16 @@ namespace SmartTexture
             useMaterial.SetTexture("_GreenChannel", textures[1] != null ? textures[1] : Texture2D.blackTexture);
             useMaterial.SetTexture("_BlueChannel", textures[2] != null ? textures[2] : Texture2D.blackTexture);
             useMaterial.SetTexture("_AlphaChannel", textures[3] != null ? textures[3] : Texture2D.blackTexture);
-            useMaterial.SetVector("_InvertColor",
-                new Vector4(invertColor[0], invertColor[1], invertColor[2], invertColor[3]));
+            useMaterial.SetVector("_InvertColor", new Vector4(invertColor[0], invertColor[1], invertColor[2], invertColor[3]));
 
             useMaterial.SetVector("_ChannelMapR", GetChannelMask(settings[0].channel));
             useMaterial.SetVector("_ChannelMapG", GetChannelMask(settings[1].channel));
             useMaterial.SetVector("_ChannelMapB", GetChannelMask(settings[2].channel));
             useMaterial.SetVector("_ChannelMapA", GetChannelMask(settings[3].channel));
 
-            var rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32,
-                isSrgb ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
+            var format = isHDR ? supportsFloatTexture ? RenderTextureFormat.ARGBFloat : RenderTextureFormat.ARGBHalf : RenderTextureFormat.ARGB32;
+            var rt = RenderTexture.GetTemporary(width, height, 0, format,
+                isSRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = rt;
 
