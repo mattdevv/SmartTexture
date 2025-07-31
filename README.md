@@ -25,7 +25,7 @@ You can request features or submit bugs by creating new issues in the issue tab.
 ## Installation
 SmartTexture is a unity package and you can install it from Package Manager.
 
-Option 1: [Install package via Github](https://docs.unity3d.com/Manual/upm-ui-giturl.html).
+Option 1: [Install package via Github](https://docs.unity3d.com/Manual/upm-ui-giturl.html) by going to the Package Manger and installing via git URL with the link: `https://github.com/mattdevv/SmartTexture.git`
 
 Option 2: Clone or download this Github project and [install it as a local package](https://docs.unity3d.com/Manual/upm-ui-local.html).
 
