@@ -21,7 +21,7 @@ namespace SmartTexture.Editor
         }
 
         public const string k_SmartTextureExtesion = "smartex";
-        public const int k_SmartTextureVersion = 2;
+        public const int k_SmartTextureVersion = 3;
         public const int k_MenuPriority = 320;
 
         // Input Texture Settings

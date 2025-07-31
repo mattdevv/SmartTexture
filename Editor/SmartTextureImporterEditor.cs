@@ -6,20 +6,17 @@ using UnityEngine;
 namespace SmartTexture.Editor
 {
     [CustomEditor(typeof(SmartTextureImporter), true)]
+    [CanEditMultipleObjects]
     public class SmartTextureImporterEditor : ScriptedImporterEditor
     {
         internal static class Styles
         {
             public static readonly GUIContent[] labelChannels =
             {
-                EditorGUIUtility.TrTextContent("Red Channel",
-                    "This texture source channel will be packed into the Output texture red channel"),
-                EditorGUIUtility.TrTextContent("Green Channel",
-                    "This texture source channel will be packed into the Output texture green channel"),
-                EditorGUIUtility.TrTextContent("Blue Channel",
-                    "This texture source channel will be packed into the Output texture blue channel"),
-                EditorGUIUtility.TrTextContent("Alpha Channel",
-                    "This texture source channel will be packed into the Output texture alpha channel"),
+                EditorGUIUtility.TrTextContent("Red Channel",   "This texture source channel will be packed into the output texture red channel"),
+                EditorGUIUtility.TrTextContent("Green Channel", "This texture source channel will be packed into the output texture green channel"),
+                EditorGUIUtility.TrTextContent("Blue Channel",  "This texture source channel will be packed into the output texture blue channel"),
+                EditorGUIUtility.TrTextContent("Alpha Channel", "This texture source channel will be packed into the output texture alpha channel"),
             };
 
             public static readonly GUIContent invertColor =
@@ -85,7 +82,7 @@ namespace SmartTexture.Editor
 
             public static readonly string[] textureSizeOptions =
             {
-                "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192",
+                "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384",
             };
 
             public static readonly string[] textureCompressionOptions =
@@ -94,6 +91,9 @@ namespace SmartTexture.Editor
             public static readonly string[] textureFormat = Enum.GetNames(typeof(TextureFormat));
             public static readonly string[] resizeAlgorithmOptions = Enum.GetNames(typeof(TextureResizeAlgorithm));
         }
+        
+        
+        private bool isMultiEditing;
 
         SerializedProperty[] m_InputTextures = new SerializedProperty[4];
         SerializedProperty[] m_InputTextureSettings = new SerializedProperty[4];
@@ -129,11 +129,12 @@ namespace SmartTexture.Editor
             base.OnEnable();
             CacheSerializedProperties();
         }
+        
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-
+            
             EditorGUILayout.Space();
             m_showInputTextures = EditorGUILayout.Foldout(m_showInputTextures, "Input Textures", EditorStyles.foldoutHeader);
             if (m_showInputTextures)
@@ -155,21 +156,31 @@ namespace SmartTexture.Editor
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    m_ResolutionMode.intValue = EditorGUILayout.EnumPopup(Styles.resolutionMode,
-                        (SmartTextureImporter.TextureSizeMode) m_ResolutionMode.intValue).GetHashCode();
-                    using (new EditorGUI.DisabledScope(m_ResolutionMode.intValue !=
-                                                       (int) SmartTextureImporter.TextureSizeMode.Explicit))
+                    using (new EditorGUI.MixedValueScope(m_ResolutionMode.hasMultipleDifferentValues))
                     {
-                        Vector2Int changedResolution = EditorGUILayout.Vector2IntField(Styles.targetResolution,
-                            m_TargetResolution.vector2IntValue);
-                        changedResolution.x = Mathf.Max(changedResolution.x, 1);
-                        changedResolution.y = Mathf.Max(changedResolution.y, 1);
-                        m_TargetResolution.vector2IntValue = changedResolution;
+                        using (var check = new EditorGUI.ChangeCheckScope())
+                        {
+                            int resolutionMode = EditorGUILayout.EnumPopup(Styles.resolutionMode, (SmartTextureImporter.TextureSizeMode) m_ResolutionMode.intValue).GetHashCode();
+                            if (check.changed) m_ResolutionMode.intValue = resolutionMode;
+                        }
+                    }
+                    
+                    using (new EditorGUI.DisabledScope(m_ResolutionMode.hasMultipleDifferentValues || m_ResolutionMode.intValue != (int) SmartTextureImporter.TextureSizeMode.Explicit))
+                    {
+                        using (new EditorGUI.MixedValueScope(m_TargetResolution.hasMultipleDifferentValues))
+                        {
+                            using (var check = new EditorGUI.ChangeCheckScope())
+                            {
+                                Vector2Int changedResolution = EditorGUILayout.Vector2IntField(Styles.targetResolution, m_TargetResolution.vector2IntValue);
+                                changedResolution.x = Mathf.Max(changedResolution.x, 1);
+                                changedResolution.y = Mathf.Max(changedResolution.y, 1);
+                                if (check.changed) m_TargetResolution.vector2IntValue = changedResolution;
+                            }
+                        }
                     }
 
                     EditorGUILayout.Space();
 
-                    // TODO: Figure out how to apply TextureImporterSettings on ScriptedImporter
                     EditorGUILayout.PropertyField(m_AlphaIsTransparency, Styles.alphaIsTransparency);
                     EditorGUILayout.PropertyField(m_sRGBTextureProperty, Styles.sRGBTexture);
                     EditorGUILayout.PropertyField(m_IsReadableProperty, Styles.readWrite);
@@ -189,14 +200,11 @@ namespace SmartTexture.Editor
             EditorGUILayout.Space();
             EditorGUILayout.Space();
 
-
-            m_showTextureSettings = EditorGUILayout.Foldout(m_showTextureSettings, "Texture Platform Settings",
-                EditorStyles.foldoutHeader);
+            m_showTextureSettings = EditorGUILayout.Foldout(m_showTextureSettings, "Texture Platform Settings", EditorStyles.foldoutHeader);
             if (m_showTextureSettings)
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    // TODO: Figure out how to apply PlatformTextureImporterSettings on ScriptedImporter
                     DrawTextureImporterSettings();
                 }
             }
@@ -213,33 +221,46 @@ namespace SmartTexture.Editor
             if (index < 0 || index >= 4)
                 return;
 
-            Texture2D texture = (Texture2D) m_InputTextures[index].objectReferenceValue;
-            if (texture != null)
+            if (m_InputTextures[index].hasMultipleDifferentValues == false)
             {
-                TextureImporterType textureType = SmartTextureImporter.GetTextureType(texture);
-                if (textureType == TextureImporterType.Default)  // Check/show warnings if no errors
+                // show warnings related to the selected texture
+                Texture2D texture = (Texture2D) m_InputTextures[index].objectReferenceValue;
+                if (texture != null)
                 {
-                    bool targetIsSRGB = isAlpha ? false : m_sRGBTextureProperty.boolValue;
-                    bool sourceIsSRGB = m_InputTextureSettings[index].FindPropertyRelative("channel").enumValueIndex == (int)TextureChannel.A ? false : TextureFormatUtilities.IsTextureSrgb(texture);
-
-                    bool compressionWarning = TextureFormatUtilities.IsTextureCompressed(texture);
-                    bool srgbWarning = sourceIsSRGB != targetIsSRGB;
-                    if (compressionWarning || srgbWarning)
+                    TextureImporterType textureType = SmartTextureImporter.GetTextureType(texture);
+                    if (textureType == TextureImporterType.Default) // Check/show warnings if no errors
                     {
-                        string warning = "Warning, input source will cause artifacts";
-                        if (compressionWarning) warning += "\n - Source is using compression";
-                        if (srgbWarning) warning += $"\n - Input texture channel uses " + (sourceIsSRGB ? "srgb" : "linear") + 
-                                                    " encoding but target will be " + (targetIsSRGB ? "srgb" : "linear");
-                        EditorGUILayout.HelpBox(warning, MessageType.Warning);
+                        bool targetIsSRGB = isAlpha ? false : m_sRGBTextureProperty.boolValue;
+                        bool sourceIsSRGB =
+                            m_InputTextureSettings[index].FindPropertyRelative("channel").enumValueIndex ==
+                            (int) TextureChannel.A
+                                ? false
+                                : TextureFormatUtilities.IsTextureSrgb(texture);
+
+                        bool compressionWarning = TextureFormatUtilities.IsTextureCompressed(texture);
+                        bool srgbWarning = sourceIsSRGB != targetIsSRGB;
+                        if (compressionWarning || srgbWarning)
+                        {
+                            string warning = "Warning, input source will cause artifacts";
+                            if (compressionWarning) warning += "\n - Source is using compression";
+                            if (srgbWarning)
+                                warning += $"\n - Input texture channel uses " + (sourceIsSRGB ? "srgb" : "linear") +
+                                           " encoding but target will be " + (targetIsSRGB ? "srgb" : "linear");
+                            EditorGUILayout.HelpBox(warning, MessageType.Warning);
+                        }
                     }
-                }
-                else if (textureType == TextureImporterType.NormalMap)
-                {
-                    EditorGUILayout.HelpBox("Textures marked as a normal map are not yet a valid source for SmartTextures. \nIf you wish to pack a normal map, the source texture should be set to as type \"default\" and srgb turned off.", MessageType.Error);
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox("Texture sources should be imported as default type to work as expected with SmartTextures.", MessageType.Error);
+                    else if (textureType == TextureImporterType.NormalMap)
+                    {
+                        EditorGUILayout.HelpBox(
+                            "Textures marked as a normal map are not yet a valid source for SmartTextures. \nIf you wish to pack a normal map, the source texture should be set to as type \"default\" and srgb turned off.",
+                            MessageType.Error);
+                    }
+                    else
+                    {
+                        EditorGUILayout.HelpBox(
+                            "Texture sources should be imported as default type to work as expected with SmartTextures.",
+                            MessageType.Error);
+                    }
                 }
             }
 
@@ -247,9 +268,18 @@ namespace SmartTexture.Editor
             EditorGUILayout.BeginHorizontal();
             {
                 SerializedProperty invertColor = m_InputTextureSettings[index].FindPropertyRelative("invertColor");
-                invertColor.boolValue = EditorGUILayout.Toggle(Styles.invertColor, invertColor.boolValue);
+                EditorGUILayout.PropertyField(invertColor);
+
                 SerializedProperty channelSource = m_InputTextureSettings[index].FindPropertyRelative("channel");
-                channelSource.intValue = GUILayout.Toolbar(channelSource.intValue, Styles.channelSourceLabels);
+                using (new EditorGUI.MixedValueScope(channelSource.hasMultipleDifferentValues))
+                {
+                    using (var check = new EditorGUI.ChangeCheckScope())
+                    {
+                        int channelIndex = channelSource.hasMultipleDifferentValues ? -1 : channelSource.intValue;
+                        channelIndex = GUILayout.Toolbar(channelIndex, Styles.channelSourceLabels);
+                        if (check.changed) channelSource.intValue = channelIndex;
+                    }
+                }
             }
             EditorGUILayout.EndHorizontal();
 
@@ -268,64 +298,62 @@ namespace SmartTexture.Editor
                 m_TexturePlatformSettingsProperty.FindPropertyRelative("m_CrunchedCompression");
             SerializedProperty textureCrunchQuality =
                 m_TexturePlatformSettingsProperty.FindPropertyRelative("m_CompressionQuality");
-
-            EditorGUI.BeginChangeCheck();
-            int sizeOption = EditorGUILayout.Popup("Texture Size", (int) Mathf.Log(maxTextureSize.intValue, 2) - 5,
-                Styles.textureSizeOptions);
-            if (EditorGUI.EndChangeCheck())
-                maxTextureSize.intValue = 32 << sizeOption;
-
-            EditorGUI.BeginChangeCheck();
-            int resizeOption = EditorGUILayout.Popup("Resize Algorithm", resizeAlgorithm.intValue,
-                Styles.resizeAlgorithmOptions);
-            if (EditorGUI.EndChangeCheck())
-                resizeAlgorithm.intValue = resizeOption;
+            
+            using (new EditorGUI.MixedValueScope(maxTextureSize.hasMultipleDifferentValues)) {
+                using (var check = new EditorGUI.ChangeCheckScope()) {
+                    int sizeOption = EditorGUILayout.Popup("Texture Size", (int) Mathf.Log(maxTextureSize.intValue, 2) - 5, Styles.textureSizeOptions);
+                    if (check.changed) maxTextureSize.intValue = 32 << sizeOption;
+                }
+            }
+            
+            using (new EditorGUI.MixedValueScope(resizeAlgorithm.hasMultipleDifferentValues)) {
+                using (var check = new EditorGUI.ChangeCheckScope()) {
+                    int resizeOption = EditorGUILayout.Popup("Resize Algorithm", resizeAlgorithm.intValue, Styles.resizeAlgorithmOptions);
+                    if (check.changed) resizeAlgorithm.intValue = resizeOption;
+                }
+            }
 
             EditorGUILayout.LabelField("Compression", EditorStyles.boldLabel);
             using (new EditorGUI.IndentLevelScope())
             {
-                EditorGUI.BeginChangeCheck();
-                bool explicitFormat = EditorGUILayout.Toggle(Styles.useExplicitTextureFormat,
-                    m_UseExplicitTextureFormat.boolValue);
-                if (EditorGUI.EndChangeCheck())
-                    m_UseExplicitTextureFormat.boolValue = explicitFormat;
+                EditorGUILayout.PropertyField(m_UseExplicitTextureFormat);
+                bool allowEditingTextureFormat = m_UseExplicitTextureFormat.hasMultipleDifferentValues ? false : m_UseExplicitTextureFormat.boolValue;
 
-                using (new EditorGUI.DisabledScope(!explicitFormat))
+                using (new EditorGUI.DisabledScope(!allowEditingTextureFormat))
                 {
-                    EditorGUI.BeginChangeCheck();
-                    int format = EditorGUILayout.EnumPopup("Texture Format", (TextureFormat) m_TextureFormat.intValue)
-                        .GetHashCode(); //("Compression", m_TextureFormat.enumValueIndex, Styles.textureFormat);
-                    if (EditorGUI.EndChangeCheck())
-                        m_TextureFormat.intValue = format;
+                    EditorGUILayout.PropertyField(m_TextureFormat);
+                    
+                    using (new EditorGUI.MixedValueScope(textureCompressionLevel.hasMultipleDifferentValues)) {
+                        using (var check = new EditorGUI.ChangeCheckScope()) {
+                            int compressionOption = EditorGUILayout.Popup(Styles.compressionLevel, textureCompressionLevel.intValue, Styles.textureCompressionOptions);
+                            if (check.changed) textureCompressionLevel.intValue = compressionOption;
+                        }
+                    }
                 }
-
-                using (new EditorGUI.DisabledScope(explicitFormat))
-                {
-                    EditorGUI.BeginChangeCheck();
-                    int compressionOption = EditorGUILayout.Popup(Styles.compressionLevel,
-                        textureCompressionLevel.intValue, Styles.textureCompressionOptions);
-                    if (EditorGUI.EndChangeCheck())
-                        textureCompressionLevel.intValue = compressionOption;
+                
+                using (new EditorGUI.MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
+                    using (var check = new EditorGUI.ChangeCheckScope()) {
+                        bool crunchEnabled = EditorGUILayout.Toggle(Styles.crunchCompression, textureUseCrunch.intValue > 0);
+                        if (check.changed) textureUseCrunch.boolValue = crunchEnabled;
+                    }
                 }
-
-                EditorGUI.BeginChangeCheck();
-                bool crunchOption = EditorGUILayout.Toggle(Styles.crunchCompression, textureUseCrunch.boolValue);
-                if (EditorGUI.EndChangeCheck())
-                    textureUseCrunch.boolValue = crunchOption;
-
-                using (new EditorGUI.DisabledScope(!crunchOption))
+                
+                using (new EditorGUI.DisabledScope(textureCrunchQuality.hasMultipleDifferentValues ? true : !textureUseCrunch.boolValue))
                 {
-                    EditorGUI.BeginChangeCheck();
-                    int crunchLevel = EditorGUILayout.IntSlider(Styles.crunchQuality, textureCrunchQuality.intValue, 0,
-                        100, new GUILayoutOption[] {GUILayout.ExpandWidth(true)});
-                    if (EditorGUI.EndChangeCheck())
-                        textureCrunchQuality.intValue = crunchLevel;
+                    using (new EditorGUI.MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
+                        using (var check = new EditorGUI.ChangeCheckScope()) {
+                            int crunchLevel = EditorGUILayout.IntSlider(Styles.crunchQuality, textureCrunchQuality.hasMultipleDifferentValues ? -1 : textureCrunchQuality.intValue, 0, 100, new GUILayoutOption[] {GUILayout.ExpandWidth(true)});
+                            if (check.changed) textureCrunchQuality.intValue = crunchLevel;
+                        }
+                    }
                 }
             }
         }
 
         void CacheSerializedProperties()
         {
+            isMultiEditing = serializedObject.isEditingMultipleObjects;
+            
             SerializedProperty texturesProperty = serializedObject.FindProperty("m_InputTextures");
             SerializedProperty settingsProperty = serializedObject.FindProperty("m_InputTextureSettings");
             for (int i = 0; i < 4; ++i)
