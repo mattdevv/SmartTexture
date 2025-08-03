@@ -18,11 +18,6 @@ Dependency tracking is handled by SmartTexture, meaning if input textures change
 
 <img alt="inspector" src="https://github.com/mattdevv/SmartTexture/assets/94596138/29039c40-1247-4cfa-b67d-b4ad6bf47c73">
 
----
-**NOTE**
-
-This package is still a Proof of Concept (POC) and it's still experimental.
-You can request features or submit bugs by creating new issues in the issue tab. For feature request please add "enhancement" label.
 
 ---
 
