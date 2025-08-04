@@ -334,17 +334,17 @@ namespace SmartTexture.Editor
 
             if (isMultiEditing == false)
             {
-                string Mask2String(TextureChannel mask)
+                string Mask2String(int mask)
                 {
                     string s = "";
-                    if ((mask & TextureChannel.R) != 0) s += "R";
-                    if ((mask & TextureChannel.G) != 0) s += "G";
-                    if ((mask & TextureChannel.B) != 0) s += "B";
-                    if ((mask & TextureChannel.A) != 0) s += "A";
+                    if ((mask & (1 << (int)TextureChannel.R)) != 0) s += "R";
+                    if ((mask & (1 << (int)TextureChannel.G)) != 0) s += "G";
+                    if ((mask & (1 << (int)TextureChannel.B)) != 0) s += "B";
+                    if ((mask & (1 << (int)TextureChannel.A)) != 0) s += "A";
                     return s;
                 }
                 
-                TextureChannel inputMask = TextureFormatUtilities.GetTextureChannelMask(
+                int inputMask = TextureFormatUtilities.GetTextureChannelMask(
                     m_InputTextures[0].objectReferenceValue != null,
                     m_InputTextures[1].objectReferenceValue != null,
                     m_InputTextures[2].objectReferenceValue != null,
@@ -357,7 +357,7 @@ namespace SmartTexture.Editor
                         true, 
                         m_IsHDRTextureProperty.boolValue,
                         textureUseCrunch.intValue > 0);
-                TextureChannel outputMask = TextureFormatUtilities.GetTextureChannelMask(textureFormat);
+                int outputMask = TextureFormatUtilities.GetTextureChannelMask(textureFormat);
                 
                 // check that all flags in input mask are also in output mask
                 if ((inputMask & outputMask) != inputMask)

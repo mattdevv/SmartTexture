@@ -85,18 +85,17 @@ namespace SmartTexture
 
         private static Vector4 GetChannelMask(TextureChannel channel)
         {
-            Vector4 mask = Vector4.zero;
-
-            if (channel < 0 || (int) channel > 3)
+            switch (channel)
             {
-                Debug.LogError("Channel must be in range 0..3 (RGBA)");
+                case TextureChannel.R: return new Vector4(1, 0, 0, 0);
+                case TextureChannel.G: return new Vector4(0, 1, 0, 0);
+                case TextureChannel.B: return new Vector4(0, 0, 1, 0);
+                case TextureChannel.A: return new Vector4(0, 0, 0, 1);
+                default: 
+                    Debug.LogError("Channel must was not in range (RGBA)");
+                    break;
             }
-            else
-            {
-                mask[(int) channel] = 1;
-            }
-
-            return mask;
+            return Vector4.zero;
         }
 
         public static void PackChannels(Texture2D mask, Texture2D[] textures, TexturePackingSettings[] settings = null)
