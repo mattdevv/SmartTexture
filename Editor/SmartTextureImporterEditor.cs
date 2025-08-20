@@ -10,6 +10,23 @@ namespace SmartTexture.Editor
     [CanEditMultipleObjects]
     public class SmartTextureImporterEditor : ScriptedImporterEditor
     {
+        public struct MixedValueScope : IDisposable
+        {
+            private bool m_DefaultMixedValue;
+
+            /// <summary>
+            ///   <para>Creates a new EditorGUI.MixedValueScope that determines the start of the group of mixed value controls.</para>
+            /// </summary>
+            /// <param name="newMixedValue">When you set this value to true, each control inside the group can show a dash (-) if selected objects have different values.</param>
+            public MixedValueScope(bool newMixedValue)
+            {
+                this.m_DefaultMixedValue = EditorGUI.showMixedValue;
+                EditorGUI.showMixedValue = newMixedValue;
+            }
+
+            void IDisposable.Dispose() => EditorGUI.showMixedValue = this.m_DefaultMixedValue;
+        }
+
         internal static class Styles
         {
             public static readonly GUIContent[] labelChannels =
@@ -97,9 +114,6 @@ namespace SmartTexture.Editor
             public static readonly string[] textureFormat = Enum.GetNames(typeof(TextureFormat));
             public static readonly string[] resizeAlgorithmOptions = Enum.GetNames(typeof(TextureResizeAlgorithm));
         }
-        
-        
-        private bool isMultiEditing;
 
         SerializedProperty[] m_InputTextures = new SerializedProperty[4];
         SerializedProperty[] m_InputTextureSettings = new SerializedProperty[4];
@@ -164,7 +178,7 @@ namespace SmartTexture.Editor
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    using (new EditorGUI.MixedValueScope(m_ResolutionMode.hasMultipleDifferentValues))
+                    using (new MixedValueScope(m_ResolutionMode.hasMultipleDifferentValues))
                     {
                         using (var check = new EditorGUI.ChangeCheckScope())
                         {
@@ -175,7 +189,7 @@ namespace SmartTexture.Editor
                     
                     using (new EditorGUI.DisabledScope(m_ResolutionMode.hasMultipleDifferentValues || m_ResolutionMode.intValue != (int) SmartTextureImporter.TextureSizeMode.Explicit))
                     {
-                        using (new EditorGUI.MixedValueScope(m_TargetResolution.hasMultipleDifferentValues))
+                        using (new MixedValueScope(m_TargetResolution.hasMultipleDifferentValues))
                         {
                             using (var check = new EditorGUI.ChangeCheckScope())
                             {
@@ -287,7 +301,7 @@ namespace SmartTexture.Editor
                 EditorGUILayout.PropertyField(invertColor);
 
                 SerializedProperty channelSource = m_InputTextureSettings[index].FindPropertyRelative("channel");
-                using (new EditorGUI.MixedValueScope(channelSource.hasMultipleDifferentValues))
+                using (new MixedValueScope(channelSource.hasMultipleDifferentValues))
                 {
                     using (var check = new EditorGUI.ChangeCheckScope())
                     {
@@ -315,14 +329,14 @@ namespace SmartTexture.Editor
             SerializedProperty textureCrunchQuality =
                 m_TexturePlatformSettingsProperty.FindPropertyRelative("m_CompressionQuality");
             
-            using (new EditorGUI.MixedValueScope(maxTextureSize.hasMultipleDifferentValues)) {
+            using (new MixedValueScope(maxTextureSize.hasMultipleDifferentValues)) {
                 using (var check = new EditorGUI.ChangeCheckScope()) {
                     int sizeOption = EditorGUILayout.Popup("Maximum Texture Size", (int) Mathf.Log(maxTextureSize.intValue, 2) - 5, Styles.textureSizeOptions);
                     if (check.changed) maxTextureSize.intValue = 32 << sizeOption;
                 }
             }
             
-            using (new EditorGUI.MixedValueScope(resizeAlgorithm.hasMultipleDifferentValues)) {
+            using (new MixedValueScope(resizeAlgorithm.hasMultipleDifferentValues)) {
                 using (var check = new EditorGUI.ChangeCheckScope()) {
                     int resizeOption = EditorGUILayout.Popup("Resize Algorithm", resizeAlgorithm.intValue, Styles.resizeAlgorithmOptions);
                     if (check.changed) resizeAlgorithm.intValue = resizeOption;
@@ -332,7 +346,7 @@ namespace SmartTexture.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Format", EditorStyles.boldLabel);
 
-            if (isMultiEditing == false)
+            if (serializedObject.isEditingMultipleObjects == false)
             {
                 string Mask2String(int mask)
                 {
@@ -375,14 +389,14 @@ namespace SmartTexture.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Compression", EditorStyles.boldLabel);
             
-            using (new EditorGUI.MixedValueScope(textureCompressionLevel.hasMultipleDifferentValues)) {
+            using (new MixedValueScope(textureCompressionLevel.hasMultipleDifferentValues)) {
                 using (var check = new EditorGUI.ChangeCheckScope()) {
                     int compressionOption = EditorGUILayout.Popup(Styles.compressionLevel, textureCompressionLevel.intValue, Styles.textureCompressionOptions);
                     if (check.changed) textureCompressionLevel.intValue = compressionOption;
                 }
             }
             
-            using (new EditorGUI.MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
+            using (new MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
                 using (var check = new EditorGUI.ChangeCheckScope()) {
                     bool crunchEnabled = EditorGUILayout.Toggle(Styles.crunchCompression, textureUseCrunch.intValue > 0);
                     if (check.changed) textureUseCrunch.boolValue = crunchEnabled;
@@ -391,7 +405,7 @@ namespace SmartTexture.Editor
             
             using (new EditorGUI.DisabledScope(textureCrunchQuality.hasMultipleDifferentValues ? true : !textureUseCrunch.boolValue))
             {
-                using (new EditorGUI.MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
+                using (new MixedValueScope(textureUseCrunch.hasMultipleDifferentValues)) {
                     using (var check = new EditorGUI.ChangeCheckScope()) {
                         int crunchLevel = EditorGUILayout.IntSlider(Styles.crunchQuality, textureCrunchQuality.hasMultipleDifferentValues ? -1 : textureCrunchQuality.intValue, 0, 100, new GUILayoutOption[] {GUILayout.ExpandWidth(true)});
                         if (check.changed) textureCrunchQuality.intValue = crunchLevel;
@@ -403,8 +417,6 @@ namespace SmartTexture.Editor
 
         void CacheSerializedProperties()
         {
-            isMultiEditing = serializedObject.isEditingMultipleObjects;
-            
             SerializedProperty texturesProperty = serializedObject.FindProperty("m_InputTextures");
             SerializedProperty settingsProperty = serializedObject.FindProperty("m_InputTextureSettings");
             for (int i = 0; i < 4; ++i)
