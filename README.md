@@ -43,6 +43,14 @@ Option 2: Clone or download this Github project and [install it as a local packa
 5) Now you can use this texture as any regular 2D texture in your project.
 <img width="524" alt="assign" src="https://github.com/mattdevv/SmartTexture/assets/94596138/432f0b89-d9d7-46df-95ae-63bf7a8b66fc">
 
+## To Do
+- Add a 'fix now' button to warning and error messages
+- More warnings (e.g. warn about non-pow-2 textures and compression)
+- Add an option to convert the output image to premultiplied-alpha 
+- Add an option to expand RGB colors over pixels with 0 alpha
+- Try and read common image types directly avoiding the need to keep input textures uncompressed
+- Special handling if an input image is also a SmartTexture so we directly read it's input texture (and avoid cycles)
+
 ## Acknowledgements
 * Thanks to Felipe Lira ([phi-lira](https://github.com/phi-lira)) for the base of this project 
 * Thanks to pschraut for [Texture2DArrayImporter](https://github.com/pschraut/UnityTexture2DArrayImportPipeline) project. I've used that project to learn a few things about ScriptedImporter and reused the code to create asset file. 
