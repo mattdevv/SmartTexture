@@ -45,9 +45,11 @@ Option 2: Clone or download this Github project and [install it as a local packa
 
 ## To Do
 - Add a 'fix now' button to warning and error messages
+- Add option to resize output to a power-of-2
 - More warnings (e.g. warn about non-pow-2 textures and compression)
 - Add an option to convert the output image to premultiplied-alpha 
-- Add an option to expand RGB colors over pixels with 0 alpha
+- Add advanced options for mipmap generation
+- Add an option to expand RGB colors over pixels with 0 alpha (for better mipmaping)
 - Try and read common image types directly avoiding the need to keep input textures uncompressed
 - Special handling if an input image is also a SmartTexture so we directly read it's input texture (and avoid cycles)
 
